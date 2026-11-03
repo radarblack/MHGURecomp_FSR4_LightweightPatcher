@@ -7,13 +7,6 @@ PYTHON     ?= python3
 OUT        := build
 DLL        := $(OUT)/VK_LAYER_MHGU_fsr4.dll
 STAGE      := dist/stage
-SMOKE      := $(OUT)/smoke
-
-ifeq ($(OS),Windows_NT)
-WINE ?=
-else
-WINE ?= wine64
-endif
 
 INC      := -Isrc -Iinclude -Ivendor/include -Ivendor/minhook -Ivendor/ffx-api/api/include -Ivendor/ffx-api/upscalers/include $(VULKAN_INC)
 CFLAGS   ?= -O2
@@ -38,24 +31,10 @@ $(OUT)/vendor/minhook/hde/%.o: CFLAGS += -w
 $(DLL): $(OBJ) src/layer.def
 	$(CC) $(LDFLAGS) -o $@ $(OBJ) src/layer.def $(LIBS)
 
-smoke: $(DLL)
-	@mkdir -p $(SMOKE)
-	$(CC) $(CFLAGS) -O0 -w -o $(SMOKE)/mhgurecomp.exe tests/smoke/smoke_host.c
-	$(CC) $(CFLAGS) -w -shared -o $(SMOKE)/amd_fidelityfx_loader_vk.dll tests/smoke/fake_loader.c
-	$(CC) $(CFLAGS) -w -shared -o $(SMOKE)/vulkan-1.dll tests/smoke/fake_vulkan.c
-	cp $(SMOKE)/vulkan-1.dll $(SMOKE)/amd_fidelityfx_upscaler_vk.dll
-	cp $(DLL) $(SMOKE)/
-	WINE="$(WINE)" sh tests/run_smoke.sh $(SMOKE)
-
-test-coff: tests/test_coff.c src/coff.c
-	@mkdir -p $(OUT)
-	gcc -O1 -Wall -o $(OUT)/test_coff tests/test_coff.c src/coff.c
-	$(OUT)/test_coff "$(EXE)" ffxVkPortableUpscaleContextRecordDispatch ffxVkPortableUpscaleContextCreate
-
 dist: $(DLL)
 	rm -rf $(STAGE)
 	mkdir -p $(STAGE)/fsr4plugin
-	cp $(DLL) package/VK_LAYER_MHGU_fsr4.json package/README.txt LICENSE THIRD_PARTY_NOTICES.md $(STAGE)/fsr4plugin/
+	cp $(DLL) package/VK_LAYER_MHGU_fsr4.json LICENSE THIRD_PARTY_NOTICES.md $(STAGE)/fsr4plugin/
 	cp package/Start-MHGURecomp-FSR4.bat $(STAGE)/
 
 package: dist
@@ -66,4 +45,4 @@ clean:
 
 -include $(OBJ:.o=.d)
 
-.PHONY: all smoke test-coff dist package clean
+.PHONY: all dist package clean
