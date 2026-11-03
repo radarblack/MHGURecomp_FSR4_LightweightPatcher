@@ -1,0 +1,14 @@
+{
+    "file_format_version": "1.2.0",
+    "layer": {
+        "name": "VK_LAYER_MHGU_fsr4",
+        "type": "GLOBAL",
+        "library_path": ".\\VK_LAYER_MHGU_fsr4.dll",
+        "api_version": "1.3.0",
+        "implementation_version": "1",
+        "description": "FSR 4 (AMD FSR SDK 2.x loader) for MHGURecomp, side by side",
+        "functions": {
+            "vkNegotiateLoaderLayerInterfaceVersion": "vkNegotiateLoaderLayerInterfaceVersion"
+        }
+    }
+}
