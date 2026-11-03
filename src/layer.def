@@ -1,0 +1,4 @@
+EXPORTS
+vkNegotiateLoaderLayerInterfaceVersion
+vkGetInstanceProcAddr=layer_gipa
+vkGetDeviceProcAddr=layer_gdpa
