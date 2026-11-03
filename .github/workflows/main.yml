@@ -1,20 +1,29 @@
 name: build
 
 on:
-  push:
-    branches: [main]
-    tags: ["v*"]
-  pull_request:
   workflow_dispatch:
-  schedule:
-    - cron: "17 4 * * 1"
+    inputs:
+      version:
+        description: "Version for the zip name and the plugin (empty: dev-<short sha>)"
+        required: false
+        default: ""
+        type: string
+      publish_release:
+        description: "Create the GitHub release v<version> and attach the zip (needs a version)"
+        required: false
+        default: false
+        type: boolean
+      check_upstream:
+        description: "Also check the plugin against the latest MHGURecomp release"
+        required: false
+        default: false
+        type: boolean
 
 permissions:
   contents: write
 
 jobs:
   build:
-    if: github.event_name != 'schedule'
     runs-on: windows-latest
     defaults:
       run:
@@ -25,8 +34,15 @@ jobs:
       - name: Version
         id: version
         shell: bash
+        env:
+          INPUT_VERSION: ${{ inputs.version }}
+          PUBLISH: ${{ inputs.publish_release }}
         run: |
-          if [ "$GITHUB_REF_TYPE" = "tag" ]; then v="${GITHUB_REF_NAME#v}"; else v="dev-${GITHUB_SHA::7}"; fi
+          v="${INPUT_VERSION#v}"
+          if [ -z "$v" ]; then
+            if [ "$PUBLISH" = "true" ]; then echo "a release needs a version"; exit 1; fi
+            v="dev-${GITHUB_SHA::7}"
+          fi
           echo "version=$v" >> "$GITHUB_OUTPUT"
 
       - uses: msys2/setup-msys2@v2
@@ -62,16 +78,18 @@ jobs:
           if-no-files-found: error
 
       - name: Attach the zip to the release
-        if: github.ref_type == 'tag'
+        if: inputs.publish_release
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: v${{ steps.version.outputs.version }}
+          target_commitish: ${{ github.sha }}
           files: |
             dist/MHGURecomp-FSR4-Layer-${{ steps.version.outputs.version }}.zip
             dist/MHGURecomp-FSR4-Layer-${{ steps.version.outputs.version }}.zip.sha256
           generate_release_notes: true
 
   compat:
-    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    if: inputs.check_upstream
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
