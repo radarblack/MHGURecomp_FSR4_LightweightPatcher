@@ -1,4 +1,4 @@
-# MHGURecomp_FSR4_LightweightPatcher
+# MHGURecomp FSR4 Patcher
 Patches back in the FSR4 to the MHGURecomp
 
 ## Requirement:
