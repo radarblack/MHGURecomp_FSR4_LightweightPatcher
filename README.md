@@ -3,9 +3,9 @@ Patches back in the FSR4 to the MHGURecomp
 
 ## Requirement:
 • MHGURecomp by morerokk (Tested on 0.13.1)  
- → https://github.com/morerokk/MHGURecomp  
+—→ https://github.com/morerokk/MHGURecomp  
 • "amd_fidelityfx_loader_vk.dll" and "amd_fidelityfx_upscaler_vk.dll" from the AMD SDK (Tested on v2.4)  
- → https://github.com/GPUOpen-LibrariesAndSDKs/FidelityFX-SDK  
+—→ https://github.com/GPUOpen-LibrariesAndSDKs/FidelityFX-SDK  
 • FSR4-capable GPU (Tested on RX6600)
 
 Installation:
