@@ -1,0 +1,95 @@
+name: build
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+  workflow_dispatch:
+  schedule:
+    - cron: "17 4 * * 1"
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    if: github.event_name != 'schedule'
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: msys2 {0}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Version
+        id: version
+        shell: bash
+        run: |
+          if [ "$GITHUB_REF_TYPE" = "tag" ]; then v="${GITHUB_REF_NAME#v}"; else v="dev-${GITHUB_SHA::7}"; fi
+          echo "version=$v" >> "$GITHUB_OUTPUT"
+
+      - uses: msys2/setup-msys2@v2
+        with:
+          msystem: UCRT64
+          update: false
+          install: >-
+            make
+            mingw-w64-ucrt-x86_64-gcc
+            mingw-w64-ucrt-x86_64-vulkan-headers
+
+      - name: Build the layer DLL
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: make -j4 VERSION="$VERSION"
+
+      - name: Smoke test
+        run: make smoke VERSION="${{ steps.version.outputs.version }}"
+
+      - name: Stage the release folder
+        run: make dist VERSION="${{ steps.version.outputs.version }}"
+
+      - name: Create the zip
+        shell: pwsh
+        run: python tools/package.py dist/stage "dist/MHGURecomp-FSR4-Layer-${{ steps.version.outputs.version }}.zip"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: MHGURecomp-FSR4-Layer-${{ steps.version.outputs.version }}
+          path: |
+            dist/MHGURecomp-FSR4-Layer-${{ steps.version.outputs.version }}.zip
+            dist/MHGURecomp-FSR4-Layer-${{ steps.version.outputs.version }}.zip.sha256
+          if-no-files-found: error
+
+      - name: Attach the zip to the release
+        if: github.ref_type == 'tag'
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/MHGURecomp-FSR4-Layer-${{ steps.version.outputs.version }}.zip
+            dist/MHGURecomp-FSR4-Layer-${{ steps.version.outputs.version }}.zip.sha256
+          generate_release_notes: true
+
+  compat:
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      - name: Download the latest MHGURecomp Windows release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release download --repo morerokk/MHGURecomp --pattern 'Windows-MHGURecomp.*.zip' --dir upstream
+          unzip -q upstream/Windows-MHGURecomp.*.zip -d upstream/game
+          echo "GAME_EXE=$(find upstream/game -name mhgurecomp.exe | head -n 1)" >> "$GITHUB_ENV"
+
+      - name: Check the plugin still fits the game
+        run: python tools/check_upstream.py --exe "$GAME_EXE"
+
+      - name: Check the symbol lookup against the game
+        run: make test-coff EXE="$GAME_EXE"
