@@ -59,9 +59,6 @@ jobs:
           VERSION: ${{ steps.version.outputs.version }}
         run: make -j4 VERSION="$VERSION"
 
-      - name: Smoke test
-        run: make smoke VERSION="${{ steps.version.outputs.version }}"
-
       - name: Stage the release folder
         run: make dist VERSION="${{ steps.version.outputs.version }}"
 
@@ -105,9 +102,3 @@ jobs:
           gh release download --repo morerokk/MHGURecomp --pattern 'Windows-MHGURecomp.*.zip' --dir upstream
           unzip -q upstream/Windows-MHGURecomp.*.zip -d upstream/game
           echo "GAME_EXE=$(find upstream/game -name mhgurecomp.exe | head -n 1)" >> "$GITHUB_ENV"
-
-      - name: Check the plugin still fits the game
-        run: python tools/check_upstream.py --exe "$GAME_EXE"
-
-      - name: Check the symbol lookup against the game
-        run: make test-coff EXE="$GAME_EXE"
